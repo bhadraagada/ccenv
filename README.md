@@ -1,4 +1,4 @@
-# Claude Env (ccx)
+# Claude Env (ccx or ccenv-cli)
 
 **Environment Orchestrator and Context Switcher for Claude Code CLI**
 
