@@ -1,20 +1,25 @@
 {
   "name": "ccenv-cli",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Switch Claude Code backends instantly. Like nvm, but for AI providers. Zero server required.",
   "main": "dist/cli.js",
   "bin": {
     "ccx": "./dist/cli.js",
     "ccenv": "./dist/cli.js"
   },
-  "type": "module",
-  "scripts": {
-    "build": "tsc",
-    "prepublishOnly": "npm run build",
-    "dev": "npx ts-node src/cli.ts",
-    "start": "node dist/cli.js",
-    "test": "node --test"
-  },
+"type": "module",
+"scripts": {
+  "typecheck": "tsc --noEmit",
+  "build": "tsc",
+  "prepublishOnly": "npm run build",
+  "dev": "npx ts-node src/cli.ts",
+  "start": "node dist/cli.js",
+  "web": "node dist/server.js",
+  "web:dev": "npx tsx src/server.ts",
+  "build-web": "tsc && cd web && npm run build",
+  "test": "node --test"
+},
+
   "keywords": [
     "claude",
     "claude-code",
@@ -46,13 +51,17 @@
   ],
   "dependencies": {
     "@inquirer/prompts": "^7.2.1",
+    "ccenv-cli": "^1.0.2",
     "commander": "^12.1.0",
-    "conf": "^13.0.1"
+    "conf": "^13.0.1",
+    "express": "^5.2.1"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^20.17.0",
-    "typescript": "^5.6.3",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.6.3"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -55,13 +55,13 @@ export const providerTemplates: ProviderTemplate[] = [
   },
   {
     name: 'gemini',
-    displayName: 'Google Gemini',
-    description: 'Google Gemini models via AI Studio',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    displayName: 'Google Gemini (Official)',
+    description: 'Google Gemini models via AI Studio (requires Anthropic-compatible proxy)',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
     defaultModel: 'gemini-2.5-flash',
     requiresApiKey: true,
     clearAnthropicKey: true,
-    setupInstructions: 'Get your API key at https://aistudio.google.com/apikey'
+    setupInstructions: 'Get your API key at https://aistudio.google.com/apikey. NOTE: Uses the Anthropic-compatible endpoint (/openai).'
   },
   {
     name: 'ollama',

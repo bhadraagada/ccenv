@@ -68,6 +68,51 @@ eval "$(ccx reset)"  # bash/zsh
 iex (ccx reset --shell powershell)  # PowerShell
 ```
 
+## Web UI
+
+Prefer a graphical interface? ccenv now includes a web-based UI for easy profile management!
+
+### Start the Web UI
+
+```bash
+# Build first (one-time setup)
+npm run build
+
+# Start web server
+npm run web
+
+# For development mode (auto-reload)
+npm run web:dev
+```
+
+The web UI will be available at `http://localhost:3000`
+
+### Web UI Features
+
+Prefer a graphical interface? ccenv now includes a web-based UI for easy profile management!
+
+### Start the Web UI
+
+```bash
+# Run the web server (development mode)
+npm run web
+
+# Or build and run
+npm run build-web
+```
+
+The web UI will be available at `http://localhost:3000`
+
+### Web UI Features
+
+- **Dashboard**: View all profiles and current active profile at a glance
+- **Create/Edit Profiles**: Full form interface with template support
+- **One-Click Activation**: Generate shell commands for any profile
+- **Export/Import**: Share profiles with team members
+- **Multiple Shell Support**: Generate commands for Bash, Zsh, Fish, PowerShell, and CMD
+
+The web UI uses the same secure, encrypted storage as the CLI, so your API keys remain safe.
+
 ## Commands
 
 | Command | Description |
