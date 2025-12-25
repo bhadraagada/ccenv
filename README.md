@@ -18,7 +18,7 @@ Every time you want to switch Claude Code from the official Anthropic API to Ope
 ## Installation
 
 ```bash
-npm install -g claude-env
+npm install -g ccenv-cli
 ```
 
 ## Quick Start
@@ -33,49 +33,56 @@ ccx create work --template openrouter --api-key sk-or-xxxxx
 ccx setup
 ```
 
-### 2. Activate the profile
+### 2. Run Claude with your profile
 
+**Easiest way (recommended):**
+```bash
+ccx run work
+```
+
+This launches Claude Code directly with the profile's environment - no shell tricks needed!
+
+**Alternative: Activate in current shell**
 ```bash
 # Bash/Zsh
 eval "$(ccx use work)"
 
 # PowerShell
-Invoke-Expression (ccx use work --shell powershell)
+iex (ccx use work --shell powershell)
 
 # Fish
 ccx use work --shell fish | source
-```
 
-### 3. Run Claude Code
-
-```bash
+# Then run claude normally
 claude
 ```
 
-That's it! Claude Code will now route through OpenRouter.
-
-### 4. Switch back to official Anthropic
+### 3. Switch back to official Anthropic
 
 ```bash
-eval "$(ccx use official)"
-# or
-eval "$(ccx reset)"
+# Run with default settings
+ccx run
+
+# Or reset your shell environment
+eval "$(ccx reset)"  # bash/zsh
+iex (ccx reset --shell powershell)  # PowerShell
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
+| `ccx run [profile]` | **Launch Claude with a profile directly** |
+| `ccx setup` | Interactive profile setup wizard |
+| `ccx create <name>` | Create a new profile |
 | `ccx list` | List all profiles |
 | `ccx show <name>` | Show profile details |
-| `ccx create <name>` | Create a new profile |
 | `ccx edit <name>` | Edit an existing profile |
 | `ccx delete <name>` | Delete a profile |
 | `ccx use <name>` | Activate a profile (outputs shell script) |
 | `ccx reset` | Reset environment to default |
 | `ccx current` | Show current profile status |
 | `ccx templates` | List available provider templates |
-| `ccx setup` | Interactive profile setup wizard |
 | `ccx export <name>` | Export profile as JSON |
 | `ccx import <json>` | Import profile from JSON |
 
@@ -177,15 +184,20 @@ Set-Alias cc-switch Switch-Claude
 
 ## Troubleshooting
 
-### "Profile not taking effect"
+### "Profile not taking effect" (when using `ccx use`)
 
-Make sure you're using `eval`:
+Make sure you're using `eval` or `iex`:
 ```bash
 # Wrong
 ccx use work
 
 # Right
 eval "$(ccx use work)"
+```
+
+**Or just use `ccx run` instead** - it handles everything for you:
+```bash
+ccx run work
 ```
 
 ### "Shell not detected correctly"

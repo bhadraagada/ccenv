@@ -164,7 +164,7 @@ program
   .command('official')
   .description('Quick switch to official Anthropic (creates profile if needed)')
   .action(async () => {
-    const { profileExists, getProfile } = await import('./lib/config.js');
+    const { profileExists } = await import('./lib/config.js');
     if (!profileExists('official')) {
       createProfile('official', { template: 'official' });
     }

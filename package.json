@@ -1,14 +1,16 @@
 {
-  "name": "claude-env",
-  "version": "1.0.0",
-  "description": "Environment Orchestrator and Context Switcher for Claude Code CLI - Switch AI backends with a single command",
-  "main": "dist/index.js",
+  "name": "ccenv-cli",
+  "version": "1.0.1",
+  "description": "Switch Claude Code backends instantly. Like nvm, but for AI providers. Zero server required.",
+  "main": "dist/cli.js",
   "bin": {
     "ccx": "./dist/cli.js",
-    "claude-env": "./dist/cli.js"
+    "ccenv": "./dist/cli.js"
   },
+  "type": "module",
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "dev": "npx ts-node src/cli.ts",
     "start": "node dist/cli.js",
     "test": "node --test"
@@ -18,18 +20,33 @@
     "claude-code",
     "anthropic",
     "openrouter",
+    "deepseek",
+    "ollama",
     "ai",
     "llm",
     "environment",
     "profile-manager",
-    "cli"
+    "cli",
+    "developer-tools"
   ],
-  "author": "",
+  "author": "bhadra",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bhadraagada/ccenv"
+  },
+  "bugs": {
+    "url": "https://github.com/bhadraagada/ccenv/issues"
+  },
+  "homepage": "https://github.com/bhadraagada/ccenv#readme",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
-    "chalk": "^5.3.0",
-    "commander": "^12.1.0",
     "@inquirer/prompts": "^7.2.1",
+    "commander": "^12.1.0",
     "conf": "^13.0.1"
   },
   "devDependencies": {
