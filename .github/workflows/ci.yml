@@ -60,3 +60,8 @@ jobs:
           path: |
             dist/
             web/dist/
+  publish:
+    name: Publish Package
+    needs: validate-and-build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.repository == 'ccenv/ccenv-cli'
