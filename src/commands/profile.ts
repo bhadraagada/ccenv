@@ -1,9 +1,10 @@
 // Profile management commands
 
 import * as config from '../lib/config.js';
-import { generateShellScript, generateResetScript, detectShell } from '../lib/shell.js';
+import { generateShellScript, generateResetScript, detectShell, generateEnvVars } from '../lib/shell.js';
 import { getTemplate, listTemplates } from '../templates/providers.js';
 import { Profile, ShellType } from '../types.js';
+import { spawn } from 'child_process';
 
 export function listProfiles(): void {
   const profiles = config.getProfiles();
@@ -277,4 +278,71 @@ export function importProfile(jsonStr: string, name?: string): void {
     console.error('Invalid JSON:', e);
     process.exit(1);
   }
+}
+
+// Run Claude directly with a profile's environment
+export async function runWithProfile(name: string): Promise<void> {
+  const profile = config.getProfile(name);
+  
+  if (!profile) {
+    console.error(`Profile "${name}" not found.`);
+    process.exit(1);
+  }
+  
+  const env = generateEnvVars(profile);
+  const childEnv: Record<string, string> = { ...process.env } as Record<string, string>;
+  
+  // Set the environment variables
+  for (const [key, value] of Object.entries(env)) {
+    if (value === '') {
+      delete childEnv[key];
+    } else if (value !== undefined) {
+      childEnv[key] = value;
+    }
+  }
+  childEnv['CCX_ACTIVE_PROFILE'] = name;
+  
+  // Update active profile in config
+  config.setActiveProfile(name);
+  
+  console.log(`Launching Claude with profile: ${name}`);
+  console.log(`Model: ${profile.model || '(default)'}`);
+  console.log('');
+  
+  // Spawn claude with the modified environment
+  const child = spawn('claude', [], {
+    env: childEnv,
+    stdio: 'inherit',
+    shell: true
+  });
+  
+  child.on('close', (code) => {
+    process.exit(code || 0);
+  });
+}
+
+// Run Claude with reset environment (official)
+export async function runReset(): Promise<void> {
+  const childEnv: Record<string, string> = { ...process.env } as Record<string, string>;
+  
+  // Remove ccx-related env vars
+  delete childEnv['ANTHROPIC_BASE_URL'];
+  delete childEnv['ANTHROPIC_AUTH_TOKEN'];
+  delete childEnv['ANTHROPIC_MODEL'];
+  delete childEnv['CCX_ACTIVE_PROFILE'];
+  
+  config.setActiveProfile(null);
+  
+  console.log('Launching Claude with default settings');
+  console.log('');
+  
+  const child = spawn('claude', [], {
+    env: childEnv,
+    stdio: 'inherit',
+    shell: true
+  });
+  
+  child.on('close', (code) => {
+    process.exit(code || 0);
+  });
 }

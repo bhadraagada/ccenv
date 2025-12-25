@@ -98,11 +98,7 @@ function generateFishScript(env: EnvVars, profile: Profile): string {
 }
 
 function generatePowerShellScript(env: EnvVars, profile: Profile): string {
-  const lines: string[] = [
-    `# Claude Env - Profile: ${profile.name}`,
-    `# Generated: ${new Date().toISOString()}`,
-    ''
-  ];
+  const lines: string[] = [];
   
   for (const [key, value] of Object.entries(env)) {
     if (value === '') {
@@ -114,10 +110,10 @@ function generatePowerShellScript(env: EnvVars, profile: Profile): string {
     }
   }
   
-  lines.push('');
   lines.push(`$env:CCX_ACTIVE_PROFILE = '${profile.name}'`);
   
-  return lines.join('\n');
+  // Join with semicolons for PowerShell to handle as single expression
+  return lines.join('; ');
 }
 
 function generateCmdScript(env: EnvVars, profile: Profile): string {
@@ -156,7 +152,7 @@ export function generateResetScript(shell: ShellType): string {
     case 'fish':
       return varsToUnset.map(v => `set -e ${v}`).join('\n');
     case 'powershell':
-      return varsToUnset.map(v => `Remove-Item Env:\\${v} -ErrorAction SilentlyContinue`).join('\n');
+      return varsToUnset.map(v => `Remove-Item Env:\\${v} -ErrorAction SilentlyContinue`).join('; ');
     case 'cmd':
       return varsToUnset.map(v => `set ${v}=`).join('\n');
     default:

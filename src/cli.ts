@@ -183,5 +183,21 @@ program
     }
   });
 
+// Run Claude with a specific profile
+program
+  .command('run [name]')
+  .description('Activate profile and launch Claude Code directly')
+  .option('-p, --profile <name>', 'Profile to use')
+  .action(async (name, options) => {
+    const profileName = name || options.profile;
+    const { runWithProfile, runReset } = await import('./commands/profile.js');
+    
+    if (profileName) {
+      await runWithProfile(profileName);
+    } else {
+      await runReset();
+    }
+  });
+
 // Parse and execute
 program.parse();
