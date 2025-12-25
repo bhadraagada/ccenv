@@ -1,6 +1,6 @@
 {
   "name": "ccenv-cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Switch Claude Code backends instantly. Like nvm, but for AI providers. Zero server required.",
   "main": "dist/cli.js",
   "bin": {
