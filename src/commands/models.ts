@@ -1,6 +1,7 @@
 // Models command - fetch and search available models from OpenRouter
 import { select, input } from '@inquirer/prompts';
 import * as tui from '../tui/theme.js';
+import { banner } from '../tui/theme.js';
 
 interface OpenRouterModel {
   id: string;
@@ -40,7 +41,15 @@ export async function fetchModels(): Promise<OpenRouterModel[]> {
 }
 
 export async function listModels(searchTerm?: string, limit: number = 30): Promise<void> {
-  console.log(tui.header('OpenRouter Models', 'Fetching available models...'));
+  console.log(banner('MODELS', {
+    font: 'small',
+    color: tui.theme.colors.primary,
+    subtitle: 'OpenRouter Model Browser',
+    center: false,
+  }));
+  
+  console.log(tui.info('Fetching models...'));
+  console.log('');
   
   const models = await fetchModels();
   
@@ -100,7 +109,12 @@ export async function listModels(searchTerm?: string, limit: number = 30): Promi
 }
 
 export async function searchModelsInteractive(): Promise<string | null> {
-  console.log(tui.header('Model Search', 'Search and select from OpenRouter models'));
+  console.log(banner('MODELS', {
+    font: 'small',
+    color: tui.theme.colors.primary,
+    subtitle: 'Interactive Model Search',
+    center: false,
+  }));
   
   const models = await fetchModels();
   
@@ -164,7 +178,15 @@ function formatContext(contextLength: number): string {
 }
 
 export async function getModelInfo(modelId: string): Promise<void> {
-  console.log(tui.header('Model Info', 'Fetching model details...'));
+  console.log(banner('MODEL', {
+    font: 'small',
+    color: tui.theme.colors.primary,
+    subtitle: 'Model Details',
+    center: false,
+  }));
+  
+  console.log(tui.info('Fetching model details...'));
+  console.log('');
   
   const models = await fetchModels();
   const model = models.find(m => m.id === modelId);

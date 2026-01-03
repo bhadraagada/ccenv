@@ -5,6 +5,7 @@ import * as config from '../lib/config.js';
 import { Profile } from '../types.js';
 import { fetchModels } from './models.js';
 import * as tui from '../tui/theme.js';
+import { banner } from '../tui/theme.js';
 
 interface OpenRouterModel {
   id: string;
@@ -122,11 +123,13 @@ async function selectModelInteractive(defaultModel?: string): Promise<string | u
 }
 
 export async function runSetupWizard(): Promise<void> {
-  console.log('');
-  console.log(tui.theme.border.active('╭────────────────────────────────────────────╮'));
-  console.log(tui.theme.border.active('│') + tui.theme.text.title('     Claude Env - Profile Setup Wizard     ') + tui.theme.border.active('│'));
-  console.log(tui.theme.border.active('╰────────────────────────────────────────────╯'));
-  console.log('');
+  // Show ASCII banner
+  console.log(banner('CCX', {
+    font: 'block',
+    color: tui.theme.colors.primary,
+    subtitle: 'Profile Setup Wizard',
+    center: false,
+  }));
   
   // Get profile name
   const profileName = await input({
@@ -273,8 +276,13 @@ export async function runQuickSetup(templateName: string): Promise<void> {
     process.exit(1);
   }
   
-  console.log('');
-  console.log(tui.header(`Quick Setup: ${template.displayName}`));
+  // Show small banner
+  console.log(banner('CCX', {
+    font: 'small',
+    color: tui.theme.colors.primary,
+    subtitle: `Quick Setup: ${template.displayName}`,
+    center: false,
+  }));
   
   if (template.setupInstructions) {
     console.log(tui.info(template.setupInstructions));

@@ -20,13 +20,24 @@ import { runSetupWizard, runQuickSetup } from './commands/wizard.js';
 import { listModels, getModelInfo, searchModelsInteractive } from './commands/models.js';
 import { getConfigPath } from './lib/config.js';
 import { ShellType } from './types.js';
+import { banner, theme } from './tui/theme.js';
 
 const program = new Command();
+
+// Custom help with ASCII banner
+program.addHelpText('beforeAll', () => {
+  return banner('CCX', {
+    font: 'small',
+    color: theme.colors.primary,
+    subtitle: 'Claude Code Environment Switcher',
+    center: false,
+  });
+});
 
 program
   .name('ccx')
   .description('Environment Orchestrator and Context Switcher for Claude Code CLI')
-  .version('1.0.0');
+  .version('1.1.6');
 
 // List all profiles
 program
