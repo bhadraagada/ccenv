@@ -1,6 +1,6 @@
 // Models command - fetch and search available models from OpenRouter
-
 import { select, input } from '@inquirer/prompts';
+import * as tui from '../tui/theme.js';
 
 interface OpenRouterModel {
   id: string;
@@ -34,18 +34,18 @@ export async function fetchModels(): Promise<OpenRouterModel[]> {
     cachedModels = data.data || [];
     return cachedModels;
   } catch (error) {
-    console.error('Error fetching models:', (error as Error).message);
+    console.log(tui.error(`Failed to fetch models: ${(error as Error).message}`));
     return [];
   }
 }
 
 export async function listModels(searchTerm?: string, limit: number = 30): Promise<void> {
-  console.log('Fetching models from OpenRouter...\n');
+  console.log(tui.header('OpenRouter Models', 'Fetching available models...'));
   
   const models = await fetchModels();
   
   if (models.length === 0) {
-    console.error('No models found or failed to fetch.');
+    console.log(tui.error('No models found or failed to fetch.'));
     return;
   }
 
@@ -61,7 +61,7 @@ export async function listModels(searchTerm?: string, limit: number = 30): Promi
   }
 
   if (filtered.length === 0) {
-    console.log(`No models found matching "${searchTerm}"`);
+    console.log(tui.error(`No models found matching "${searchTerm}"`));
     return;
   }
 
@@ -70,41 +70,42 @@ export async function listModels(searchTerm?: string, limit: number = 30): Promi
   
   const showing = filtered.slice(0, limit);
   
-  console.log(`Found ${filtered.length} models${searchTerm ? ` matching "${searchTerm}"` : ''}:`);
+  const matchText = searchTerm ? ` matching "${tui.theme.colors.primary(searchTerm)}"` : '';
+  console.log(tui.success(`Found ${filtered.length} models${matchText}`));
+  
   if (filtered.length > limit) {
-    console.log(`(showing first ${limit}, use --limit to show more)\n`);
-  } else {
-    console.log('');
+    console.log(tui.info(`Showing first ${limit}, use --limit to show more`));
   }
+  console.log('');
 
   // Print as table
-  console.log('Model ID'.padEnd(45) + 'Context'.padEnd(12) + 'Price (per 1M tokens)');
-  console.log('─'.repeat(80));
-  
-  for (const model of showing) {
+  const headers = ['Model ID', 'Context', 'Price (per 1M tokens)'];
+  const rows = showing.map(model => {
     const promptPrice = parseFloat(model.pricing.prompt) * 1000000;
     const completionPrice = parseFloat(model.pricing.completion) * 1000000;
-    const priceStr = `$${promptPrice.toFixed(2)} / $${completionPrice.toFixed(2)}`;
+    const priceStr = tui.theme.colors.success(`$${promptPrice.toFixed(2)}`) + 
+      tui.theme.text.subtitle(' / ') + 
+      tui.theme.colors.success(`$${completionPrice.toFixed(2)}`);
     const contextStr = formatContext(model.context_length);
     
-    console.log(
-      model.id.padEnd(45) + 
-      contextStr.padEnd(12) + 
-      priceStr
-    );
-  }
+    return [model.id, contextStr, priceStr];
+  });
+  
+  console.log(tui.table(headers, rows, [44, 10, 22]));
   
   console.log('');
-  console.log('Usage: ccx create <profile> --template openrouter --model <model-id>');
+  console.log(tui.info('Usage:'));
+  console.log(`   ${tui.theme.colors.primary('ccx create <profile> --template openrouter --model <model-id>')}`);
+  console.log('');
 }
 
 export async function searchModelsInteractive(): Promise<string | null> {
-  console.log('Fetching models from OpenRouter...\n');
+  console.log(tui.header('Model Search', 'Search and select from OpenRouter models'));
   
   const models = await fetchModels();
   
   if (models.length === 0) {
-    console.error('No models found or failed to fetch.');
+    console.log(tui.error('No models found or failed to fetch.'));
     return null;
   }
 
@@ -124,7 +125,7 @@ export async function searchModelsInteractive(): Promise<string | null> {
   }
 
   if (filtered.length === 0) {
-    console.log(`No models found matching "${searchTerm}"`);
+    console.log(tui.error(`No models found matching "${searchTerm}"`));
     return null;
   }
 
@@ -140,7 +141,8 @@ export async function searchModelsInteractive(): Promise<string | null> {
   });
 
   if (filtered.length > 50) {
-    console.log(`\nShowing first 50 of ${filtered.length} matches. Use a more specific search term.\n`);
+    console.log(tui.info(`Showing first 50 of ${filtered.length} matches. Use a more specific search term.`));
+    console.log('');
   }
 
   const selected = await select({
@@ -162,25 +164,45 @@ function formatContext(contextLength: number): string {
 }
 
 export async function getModelInfo(modelId: string): Promise<void> {
+  console.log(tui.header('Model Info', 'Fetching model details...'));
+  
   const models = await fetchModels();
   const model = models.find(m => m.id === modelId);
   
   if (!model) {
-    console.error(`Model "${modelId}" not found.`);
+    console.log(tui.error(`Model "${modelId}" not found.`));
     return;
   }
 
   const promptPrice = parseFloat(model.pricing.prompt) * 1000000;
   const completionPrice = parseFloat(model.pricing.completion) * 1000000;
 
-  console.log(`\nModel: ${model.id}`);
-  console.log('─'.repeat(50));
-  console.log(`Name:          ${model.name}`);
-  console.log(`Context:       ${formatContext(model.context_length)} tokens`);
-  console.log(`Prompt:        $${promptPrice.toFixed(4)} / 1M tokens`);
-  console.log(`Completion:    $${completionPrice.toFixed(4)} / 1M tokens`);
+  console.log(`  ${tui.theme.colors.primary(tui.theme.symbols.arrowRight)} ${tui.theme.colors.primary(model.id)}`);
+  console.log('');
+  
+  console.log(tui.keyValue([
+    { key: 'Name', value: model.name },
+    { key: 'Context', value: tui.theme.colors.warning(`${formatContext(model.context_length)} tokens`) },
+    { key: 'Prompt', value: tui.theme.colors.success(`$${promptPrice.toFixed(4)} / 1M tokens`) },
+    { key: 'Completion', value: tui.theme.colors.success(`$${completionPrice.toFixed(4)} / 1M tokens`) },
+  ], 14));
+  
   if (model.description) {
-    console.log(`Description:   ${model.description}`);
+    console.log('');
+    console.log(tui.theme.text.subtitle('  Description:'));
+    // Word wrap description
+    const words = model.description.split(' ');
+    let line = '  ';
+    for (const word of words) {
+      if (line.length + word.length > 70) {
+        console.log(tui.theme.text.hint(line));
+        line = '  ';
+      }
+      line += word + ' ';
+    }
+    if (line.trim()) {
+      console.log(tui.theme.text.hint(line));
+    }
   }
   console.log('');
 }

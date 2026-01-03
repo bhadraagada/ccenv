@@ -1,10 +1,10 @@
-// Profile management commands
-
+// Profile management commands with hauktui-style TUI
 import * as config from '../lib/config.js';
 import { generateShellScript, generateResetScript, detectShell, generateEnvVars } from '../lib/shell.js';
 import { getTemplate, listTemplates } from '../templates/providers.js';
 import { Profile, ShellType } from '../types.js';
 import { spawn } from 'child_process';
+import * as tui from '../tui/theme.js';
 
 export function listProfiles(): void {
   const profiles = config.getProfiles();
@@ -12,29 +12,29 @@ export function listProfiles(): void {
   const profileNames = Object.keys(profiles);
   
   if (profileNames.length === 0) {
-    console.log('No profiles configured yet.');
+    console.log(tui.header('No Profiles', 'Get started by creating your first profile'));
+    console.log(tui.info('Create one with:'));
+    console.log(`   ${tui.theme.colors.primary('ccx create <name> --template openrouter')}`);
     console.log('');
-    console.log('Create one with:');
-    console.log('  ccx create <name>');
+    console.log(tui.info('Or run the setup wizard:'));
+    console.log(`   ${tui.theme.colors.primary('ccx setup')}`);
     console.log('');
-    console.log('Or use a template:');
-    console.log('  ccx create myprofile --template openrouter');
     return;
   }
   
-  console.log('Profiles:\n');
+  console.log(tui.header('Profiles', `${profileNames.length} configured`));
   
   for (const name of profileNames.sort()) {
     const profile = profiles[name];
     const isActive = name === activeProfile;
-    const marker = isActive ? ' * ' : '   ';
-    const activeLabel = isActive ? ' (active)' : '';
     
-    console.log(`${marker}${name}${activeLabel}`);
-    console.log(`      Provider: ${profile.provider}`);
-    console.log(`      Base URL: ${profile.baseUrl}`);
+    const statusBadge = isActive ? tui.badge('ACTIVE', 'success') : '';
+    const nameColor = isActive ? tui.theme.colors.success : tui.theme.colors.primary;
+    
+    console.log(`  ${nameColor(tui.theme.symbols.arrowRight)} ${nameColor(name)} ${statusBadge}`);
+    console.log(`    ${tui.theme.text.subtitle(`Provider: ${profile.provider}`)}`);
     if (profile.model) {
-      console.log(`      Model: ${profile.model}`);
+      console.log(`    ${tui.theme.text.subtitle(`Model: ${tui.theme.colors.warning(profile.model)}`)}`);
     }
     console.log('');
   }
@@ -44,22 +44,37 @@ export function showProfile(name: string): void {
   const profile = config.getProfile(name);
   
   if (!profile) {
-    console.error(`Profile "${name}" not found.`);
+    console.log(tui.error(`Profile "${name}" not found.`));
     process.exit(1);
   }
   
-  console.log(`Profile: ${profile.name}`);
-  console.log('─'.repeat(40));
-  console.log(`Provider:     ${profile.provider}`);
-  console.log(`Base URL:     ${profile.baseUrl}`);
-  console.log(`Model:        ${profile.model || '(default)'}`);
-  console.log(`API Key:      ${profile.apiKey ? '********' : '(not set)'}`);
-  console.log(`Clear Key:    ${profile.clearAnthropicKey ? 'Yes' : 'No'}`);
+  const activeProfile = config.getActiveProfile();
+  const isActive = name === activeProfile;
+  
+  console.log(tui.header(
+    `Profile: ${profile.name}`,
+    isActive ? 'Currently active' : undefined
+  ));
+  
+  const items = [
+    { key: 'Provider', value: profile.provider },
+    { key: 'Base URL', value: profile.baseUrl },
+    { key: 'Model', value: profile.model || tui.theme.text.subtitle('(default)') },
+    { key: 'API Key', value: profile.apiKey ? tui.theme.colors.success('********') : tui.theme.text.subtitle('(not set)') },
+    { key: 'Clear Key', value: profile.clearAnthropicKey ? 'Yes' : 'No' },
+  ];
+  
   if (profile.description) {
-    console.log(`Description:  ${profile.description}`);
+    items.push({ key: 'Description', value: profile.description });
   }
-  console.log(`Created:      ${profile.createdAt}`);
-  console.log(`Updated:      ${profile.updatedAt}`);
+  
+  items.push(
+    { key: 'Created', value: tui.theme.text.subtitle(profile.createdAt) },
+    { key: 'Updated', value: tui.theme.text.subtitle(profile.updatedAt) }
+  );
+  
+  console.log(tui.keyValue(items, 14));
+  console.log('');
 }
 
 export function createProfile(
@@ -74,7 +89,7 @@ export function createProfile(
   }
 ): void {
   if (config.profileExists(name)) {
-    console.error(`Profile "${name}" already exists. Use 'ccx edit ${name}' to modify it.`);
+    console.log(tui.error(`Profile "${name}" already exists. Use 'ccx edit ${name}' to modify it.`));
     process.exit(1);
   }
   
@@ -83,9 +98,12 @@ export function createProfile(
   if (options.template) {
     const template = getTemplate(options.template);
     if (!template) {
-      console.error(`Template "${options.template}" not found.`);
-      console.log('Available templates:');
-      listTemplates().forEach(t => console.log(`  - ${t.name}: ${t.description}`));
+      console.log(tui.error(`Template "${options.template}" not found.`));
+      console.log('');
+      console.log(tui.info('Available templates:'));
+      listTemplates().forEach(t => {
+        console.log(`   ${tui.theme.colors.primary(t.name)}: ${t.description}`);
+      });
       process.exit(1);
     }
     
@@ -102,15 +120,16 @@ export function createProfile(
     };
     
     if (template.requiresApiKey && !options.apiKey) {
-      console.log(`Note: This template requires an API key.`);
+      console.log('');
+      console.log(tui.info('This template requires an API key.'));
       if (template.setupInstructions) {
-        console.log(`Setup: ${template.setupInstructions}`);
+        console.log(tui.info(template.setupInstructions));
       }
-      console.log(`Add it with: ccx edit ${name} --api-key YOUR_KEY`);
+      console.log(`   ${tui.theme.colors.primary(`ccx edit ${name} --api-key YOUR_KEY`)}`);
     }
   } else {
     if (!options.baseUrl) {
-      console.error('Either --template or --base-url is required.');
+      console.log(tui.error('Either --template or --base-url is required.'));
       process.exit(1);
     }
     
@@ -128,10 +147,13 @@ export function createProfile(
   }
   
   config.saveProfile(profile);
-  console.log(`Profile "${name}" created successfully.`);
+  
   console.log('');
-  console.log(`Activate it with:`);
-  console.log(`  eval "$(ccx use ${name})"`);
+  console.log(tui.success(`Profile "${name}" created successfully.`));
+  console.log('');
+  console.log(tui.info('Activate it with:'));
+  console.log(`   ${tui.theme.colors.primary(`eval "$(ccx use ${name})"`)}`);
+  console.log('');
 }
 
 export function editProfile(
@@ -147,7 +169,7 @@ export function editProfile(
   const profile = config.getProfile(name);
   
   if (!profile) {
-    console.error(`Profile "${name}" not found.`);
+    console.log(tui.error(`Profile "${name}" not found.`));
     process.exit(1);
   }
   
@@ -158,22 +180,23 @@ export function editProfile(
   if (options.clearKey !== undefined) profile.clearAnthropicKey = options.clearKey;
   
   config.saveProfile(profile);
-  console.log(`Profile "${name}" updated successfully.`);
+  console.log(tui.success(`Profile "${name}" updated successfully.`));
 }
 
 export function deleteProfileCommand(name: string, force: boolean = false): void {
   if (!config.profileExists(name)) {
-    console.error(`Profile "${name}" not found.`);
+    console.log(tui.error(`Profile "${name}" not found.`));
     process.exit(1);
   }
   
   if (!force) {
-    console.log(`To confirm deletion, run: ccx delete ${name} --force`);
+    console.log(tui.info(`To confirm deletion, run:`));
+    console.log(`   ${tui.theme.colors.warning(`ccx delete ${name} --force`)}`);
     return;
   }
   
   config.deleteProfile(name);
-  console.log(`Profile "${name}" deleted.`);
+  console.log(tui.success(`Profile "${name}" deleted.`));
 }
 
 export function useProfile(name: string, shell?: ShellType): void {
@@ -206,39 +229,58 @@ export function showCurrent(): void {
   const activeProfile = config.getActiveProfile();
   const envProfile = process.env.CCX_ACTIVE_PROFILE;
   
-  console.log('Current Status:');
-  console.log('─'.repeat(40));
-  console.log(`Config active:  ${activeProfile || '(none)'}`);
-  console.log(`Shell active:   ${envProfile || '(none)'}`);
+  console.log(tui.header('Current Status'));
+  
+  const configStatus = activeProfile 
+    ? tui.theme.colors.success(activeProfile) 
+    : tui.theme.text.subtitle('(none)');
+  const shellStatus = envProfile 
+    ? tui.theme.colors.success(envProfile) 
+    : tui.theme.text.subtitle('(none)');
+    
+  console.log(tui.keyValue([
+    { key: 'Config active', value: configStatus },
+    { key: 'Shell active', value: shellStatus },
+  ], 16));
+  
   console.log('');
-  console.log('Environment Variables:');
-  console.log(`  ANTHROPIC_BASE_URL:   ${process.env.ANTHROPIC_BASE_URL || '(not set)'}`);
-  console.log(`  ANTHROPIC_AUTH_TOKEN: ${process.env.ANTHROPIC_AUTH_TOKEN ? '********' : '(not set)'}`);
-  console.log(`  ANTHROPIC_MODEL:      ${process.env.ANTHROPIC_MODEL || '(not set)'}`);
-  console.log(`  ANTHROPIC_API_KEY:    ${process.env.ANTHROPIC_API_KEY ? '********' : '(not set)'}`);
+  console.log(tui.theme.text.title('  Environment Variables'));
+  console.log('');
+  
+  const envItems = [
+    { key: 'ANTHROPIC_BASE_URL', value: process.env.ANTHROPIC_BASE_URL || tui.theme.text.subtitle('(not set)') },
+    { key: 'ANTHROPIC_AUTH_TOKEN', value: process.env.ANTHROPIC_AUTH_TOKEN ? tui.theme.colors.success('********') : tui.theme.text.subtitle('(not set)') },
+    { key: 'ANTHROPIC_MODEL', value: process.env.ANTHROPIC_MODEL ? tui.theme.colors.warning(process.env.ANTHROPIC_MODEL) : tui.theme.text.subtitle('(not set)') },
+    { key: 'ANTHROPIC_API_KEY', value: process.env.ANTHROPIC_API_KEY ? tui.theme.colors.success('********') : tui.theme.text.subtitle('(not set)') },
+  ];
+  
+  console.log(tui.keyValue(envItems, 22));
+  console.log('');
 }
 
 export function showTemplates(): void {
-  console.log('Available Provider Templates:\n');
+  console.log(tui.header('Provider Templates', 'Pre-configured AI providers'));
   
   for (const template of listTemplates()) {
-    console.log(`  ${template.name}`);
+    console.log(`  ${tui.theme.colors.primary(tui.theme.symbols.arrowRight)} ${tui.theme.colors.primary(template.name)}`);
     console.log(`    ${template.displayName}`);
-    console.log(`    ${template.description}`);
+    console.log(`    ${tui.theme.text.subtitle(template.description)}`);
     if (template.defaultModel) {
-      console.log(`    Default model: ${template.defaultModel}`);
+      console.log(`    ${tui.theme.text.subtitle('Default model:')} ${tui.theme.colors.warning(template.defaultModel)}`);
     }
     console.log('');
   }
   
-  console.log('Usage: ccx create <name> --template <template-name>');
+  console.log(tui.info('Usage:'));
+  console.log(`   ${tui.theme.colors.primary('ccx create <name> --template <template-name>')}`);
+  console.log('');
 }
 
 export function exportProfile(name: string): void {
   const profile = config.getProfile(name);
   
   if (!profile) {
-    console.error(`Profile "${name}" not found.`);
+    console.log(tui.error(`Profile "${name}" not found.`));
     process.exit(1);
   }
   
@@ -256,12 +298,12 @@ export function importProfile(jsonStr: string, name?: string): void {
     }
     
     if (!imported.name) {
-      console.error('Profile name is required. Use --name flag or include "name" in JSON.');
+      console.log(tui.error('Profile name is required. Use --name flag or include "name" in JSON.'));
       process.exit(1);
     }
     
     if (config.profileExists(imported.name)) {
-      console.error(`Profile "${imported.name}" already exists.`);
+      console.log(tui.error(`Profile "${imported.name}" already exists.`));
       process.exit(1);
     }
     
@@ -269,13 +311,14 @@ export function importProfile(jsonStr: string, name?: string): void {
     imported.updatedAt = new Date().toISOString();
     
     config.saveProfile(imported);
-    console.log(`Profile "${imported.name}" imported successfully.`);
+    console.log(tui.success(`Profile "${imported.name}" imported successfully.`));
     
     if (!imported.apiKey) {
-      console.log(`Note: No API key was imported. Add one with: ccx edit ${imported.name} --api-key YOUR_KEY`);
+      console.log(tui.info(`No API key was imported. Add one with:`));
+      console.log(`   ${tui.theme.colors.primary(`ccx edit ${imported.name} --api-key YOUR_KEY`)}`);
     }
   } catch (e) {
-    console.error('Invalid JSON:', e);
+    console.log(tui.error(`Invalid JSON: ${e}`));
     process.exit(1);
   }
 }
@@ -285,7 +328,7 @@ export async function runWithProfile(name: string): Promise<void> {
   const profile = config.getProfile(name);
   
   if (!profile) {
-    console.error(`Profile "${name}" not found.`);
+    console.log(tui.error(`Profile "${name}" not found.`));
     process.exit(1);
   }
   
@@ -305,8 +348,11 @@ export async function runWithProfile(name: string): Promise<void> {
   // Update active profile in config
   config.setActiveProfile(name);
   
-  console.log(`Launching Claude with profile: ${name}`);
-  console.log(`Model: ${profile.model || '(default)'}`);
+  console.log(tui.header('Launching Claude', `Profile: ${name}`));
+  console.log(tui.keyValue([
+    { key: 'Model', value: profile.model ? tui.theme.colors.warning(profile.model) : '(default)' },
+    { key: 'Provider', value: profile.provider },
+  ], 12));
   console.log('');
   
   // Spawn claude with the modified environment
@@ -333,7 +379,7 @@ export async function runReset(): Promise<void> {
   
   config.setActiveProfile(null);
   
-  console.log('Launching Claude with default settings');
+  console.log(tui.header('Launching Claude', 'Default settings'));
   console.log('');
   
   const child = spawn('claude', [], {

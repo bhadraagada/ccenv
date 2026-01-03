@@ -1,10 +1,10 @@
-// Interactive setup wizard
-
+// Interactive setup wizard with hauktui-style TUI
 import { select, input, confirm, password } from '@inquirer/prompts';
 import { listTemplates, getTemplate } from '../templates/providers.js';
 import * as config from '../lib/config.js';
 import { Profile } from '../types.js';
 import { fetchModels } from './models.js';
+import * as tui from '../tui/theme.js';
 
 interface OpenRouterModel {
   id: string;
@@ -27,9 +27,9 @@ async function selectModelInteractive(defaultModel?: string): Promise<string | u
     const searchOrDefault = await select({
       message: 'How would you like to select a model?',
       choices: [
-        { name: `Use default (${defaultModel || 'none'})`, value: 'default' },
-        { name: 'Search models from OpenRouter', value: 'search' },
-        { name: 'Enter model ID manually', value: 'manual' },
+        { name: `${tui.theme.colors.success('●')} Use default (${tui.theme.colors.warning(defaultModel || 'none')})`, value: 'default' },
+        { name: `${tui.theme.colors.primary('◎')} Search models from OpenRouter`, value: 'search' },
+        { name: `${tui.theme.colors.secondary('○')} Enter model ID manually`, value: 'manual' },
       ]
     });
 
@@ -46,11 +46,12 @@ async function selectModelInteractive(defaultModel?: string): Promise<string | u
     }
 
     // Search mode
-    console.log('\nFetching models from OpenRouter...');
+    console.log('');
+    console.log(tui.info('Fetching models from OpenRouter...'));
     const models = await modelsPromise;
 
     if (models.length === 0) {
-      console.log('Failed to fetch models. Falling back to manual entry.');
+      console.log(tui.error('Failed to fetch models. Falling back to manual entry.'));
       const model = await input({
         message: 'Model ID:',
         default: defaultModel
@@ -61,7 +62,7 @@ async function selectModelInteractive(defaultModel?: string): Promise<string | u
     // Search loop - allows going back to search again
     while (true) {
       const searchTerm = await input({
-        message: 'Search models (e.g. "glm", "minimax", "claude"):',
+        message: `Search models ${tui.theme.text.hint('(e.g. "glm", "minimax", "claude")')}:`,
       });
 
       let filtered = models as OpenRouterModel[];
@@ -74,7 +75,8 @@ async function selectModelInteractive(defaultModel?: string): Promise<string | u
       }
 
       if (filtered.length === 0) {
-        console.log(`No models found matching "${searchTerm}". Try another search.\n`);
+        console.log(tui.error(`No models found matching "${searchTerm}". Try another search.`));
+        console.log('');
         continue;
       }
 
@@ -83,17 +85,18 @@ async function selectModelInteractive(defaultModel?: string): Promise<string | u
       const limited = filtered.slice(0, 30);
 
       if (filtered.length > 30) {
-        console.log(`\nShowing first 30 of ${filtered.length} matches.\n`);
+        console.log('');
+        console.log(tui.info(`Showing first 30 of ${filtered.length} matches.`));
       }
 
       const choices = [
-        { name: '<< Back to search', value: '__back__' },
-        { name: '<< Back to model selection', value: '__back_menu__' },
+        { name: `${tui.theme.colors.warning('←')} Back to search`, value: '__back__' },
+        { name: `${tui.theme.colors.error('←')} Back to selection method`, value: '__back_menu__' },
         ...limited.map(m => {
           const promptPrice = parseFloat(m.pricing.prompt) * 1000000;
           const ctx = formatContext(m.context_length);
           return {
-            name: `${m.id.padEnd(40)} ${ctx.padEnd(8)} $${promptPrice.toFixed(2)}/1M`,
+            name: `  ${m.id.padEnd(38)} ${tui.theme.text.subtitle(ctx.padEnd(8))} ${tui.theme.colors.success(`$${promptPrice.toFixed(2)}/1M`)}`,
             value: m.id
           };
         })
@@ -120,18 +123,18 @@ async function selectModelInteractive(defaultModel?: string): Promise<string | u
 
 export async function runSetupWizard(): Promise<void> {
   console.log('');
-  console.log('╔══════════════════════════════════════════╗');
-  console.log('║     Claude Env - Profile Setup Wizard    ║');
-  console.log('╚══════════════════════════════════════════╝');
+  console.log(tui.theme.border.active('╭────────────────────────────────────────────╮'));
+  console.log(tui.theme.border.active('│') + tui.theme.text.title('     Claude Env - Profile Setup Wizard     ') + tui.theme.border.active('│'));
+  console.log(tui.theme.border.active('╰────────────────────────────────────────────╯'));
   console.log('');
   
   // Get profile name
   const profileName = await input({
-    message: 'Profile name:',
+    message: `${tui.theme.colors.primary('?')} Profile name:`,
     validate: (value) => {
-      if (!value.trim()) return 'Name is required';
-      if (config.profileExists(value)) return 'Profile already exists';
-      if (!/^[a-zA-Z0-9_-]+$/.test(value)) return 'Only alphanumeric, dash, and underscore allowed';
+      if (!value.trim()) return tui.theme.colors.error('Name is required');
+      if (config.profileExists(value)) return tui.theme.colors.error('Profile already exists');
+      if (!/^[a-zA-Z0-9_-]+$/.test(value)) return tui.theme.colors.error('Only alphanumeric, dash, and underscore allowed');
       return true;
     }
   });
@@ -139,9 +142,9 @@ export async function runSetupWizard(): Promise<void> {
   // Select provider template
   const templates = listTemplates();
   const templateChoice = await select({
-    message: 'Select a provider:',
+    message: `${tui.theme.colors.primary('?')} Select a provider:`,
     choices: templates.map(t => ({
-      name: `${t.displayName} - ${t.description}`,
+      name: `${tui.theme.colors.primary(t.displayName)} ${tui.theme.text.subtitle('- ' + t.description)}`,
       value: t.name
     }))
   });
@@ -152,18 +155,18 @@ export async function runSetupWizard(): Promise<void> {
   let baseUrl = template.baseUrl;
   if (templateChoice === 'custom' || !baseUrl) {
     baseUrl = await input({
-      message: 'API Base URL:',
-      validate: (value) => value.trim() ? true : 'URL is required'
+      message: `${tui.theme.colors.primary('?')} API Base URL:`,
+      validate: (value) => value.trim() ? true : tui.theme.colors.error('URL is required')
     });
   } else {
     const customUrl = await confirm({
-      message: `Use default URL (${template.baseUrl})?`,
+      message: `${tui.theme.colors.primary('?')} Use default URL (${tui.theme.colors.warning(template.baseUrl)})?`,
       default: true
     });
     
     if (!customUrl) {
       baseUrl = await input({
-        message: 'Custom API Base URL:',
+        message: `${tui.theme.colors.primary('?')} Custom API Base URL:`,
         default: template.baseUrl
       });
     }
@@ -177,13 +180,13 @@ export async function runSetupWizard(): Promise<void> {
     model = await selectModelInteractive(template.defaultModel);
   } else if (template.defaultModel) {
     const useDefaultModel = await confirm({
-      message: `Use default model (${template.defaultModel})?`,
+      message: `${tui.theme.colors.primary('?')} Use default model (${tui.theme.colors.warning(template.defaultModel)})?`,
       default: true
     });
     
     if (!useDefaultModel) {
       model = await input({
-        message: 'Model name:',
+        message: `${tui.theme.colors.primary('?')} Model name:`,
         default: template.defaultModel
       });
     } else {
@@ -191,7 +194,7 @@ export async function runSetupWizard(): Promise<void> {
     }
   } else {
     model = await input({
-      message: 'Model name (optional):',
+      message: `${tui.theme.colors.primary('?')} Model name (optional):`,
     });
   }
   
@@ -200,23 +203,23 @@ export async function runSetupWizard(): Promise<void> {
   if (template.requiresApiKey) {
     if (template.setupInstructions) {
       console.log('');
-      console.log(`ℹ ${template.setupInstructions}`);
+      console.log(tui.info(template.setupInstructions));
       console.log('');
     }
     
     apiKey = await password({
-      message: 'API Key:',
+      message: `${tui.theme.colors.primary('?')} API Key:`,
       mask: '*'
     });
   } else {
     const wantApiKey = await confirm({
-      message: 'Add an API key? (optional)',
+      message: `${tui.theme.colors.primary('?')} Add an API key? (optional)`,
       default: false
     });
     
     if (wantApiKey) {
       apiKey = await password({
-        message: 'API Key:',
+        message: `${tui.theme.colors.primary('?')} API Key:`,
         mask: '*'
       });
     }
@@ -224,13 +227,13 @@ export async function runSetupWizard(): Promise<void> {
   
   // Description
   const description = await input({
-    message: 'Description (optional):',
+    message: `${tui.theme.colors.primary('?')} Description (optional):`,
     default: template.description
   });
   
   // Clear ANTHROPIC_API_KEY?
   const clearKey = await confirm({
-    message: 'Unset ANTHROPIC_API_KEY when using this profile?',
+    message: `${tui.theme.colors.primary('?')} Unset ANTHROPIC_API_KEY when using this profile?`,
     default: template.clearAnthropicKey
   });
   
@@ -250,11 +253,10 @@ export async function runSetupWizard(): Promise<void> {
   config.saveProfile(profile);
   
   console.log('');
-  console.log('✓ Profile created successfully!');
+  console.log(tui.success('Profile created successfully!'));
   console.log('');
-  console.log('To activate this profile, run:');
-  console.log('');
-  console.log(`  eval "$(ccx use ${profileName})"`);
+  console.log(tui.info('To activate this profile, run:'));
+  console.log(`   ${tui.theme.colors.primary(`eval "$(ccx use ${profileName})"`)}`);
   console.log('');
 }
 
@@ -262,27 +264,29 @@ export async function runQuickSetup(templateName: string): Promise<void> {
   const template = getTemplate(templateName);
   
   if (!template) {
-    console.error(`Template "${templateName}" not found.`);
-    console.log('Available templates:');
-    listTemplates().forEach(t => console.log(`  - ${t.name}`));
+    console.log(tui.error(`Template "${templateName}" not found.`));
+    console.log('');
+    console.log(tui.info('Available templates:'));
+    listTemplates().forEach(t => {
+      console.log(`   ${tui.theme.colors.primary(t.name)}`);
+    });
     process.exit(1);
   }
   
   console.log('');
-  console.log(`Quick Setup: ${template.displayName}`);
-  console.log('─'.repeat(40));
+  console.log(tui.header(`Quick Setup: ${template.displayName}`));
   
   if (template.setupInstructions) {
-    console.log(`ℹ ${template.setupInstructions}`);
+    console.log(tui.info(template.setupInstructions));
     console.log('');
   }
   
   const profileName = await input({
-    message: 'Profile name:',
+    message: `${tui.theme.colors.primary('?')} Profile name:`,
     default: templateName,
     validate: (value) => {
-      if (!value.trim()) return 'Name is required';
-      if (config.profileExists(value)) return 'Profile already exists';
+      if (!value.trim()) return tui.theme.colors.error('Name is required');
+      if (config.profileExists(value)) return tui.theme.colors.error('Profile already exists');
       return true;
     }
   });
@@ -298,9 +302,9 @@ export async function runQuickSetup(templateName: string): Promise<void> {
   let apiKey: string | undefined;
   if (template.requiresApiKey) {
     apiKey = await password({
-      message: 'API Key:',
+      message: `${tui.theme.colors.primary('?')} API Key:`,
       mask: '*',
-      validate: (value) => value.trim() ? true : 'API key is required for this provider'
+      validate: (value) => value.trim() ? true : tui.theme.colors.error('API key is required for this provider')
     });
   }
   
@@ -319,7 +323,9 @@ export async function runQuickSetup(templateName: string): Promise<void> {
   config.saveProfile(profile);
   
   console.log('');
-  console.log('✓ Profile created!');
+  console.log(tui.success('Profile created!'));
   console.log('');
-  console.log(`Activate with: eval "$(ccx use ${profileName})"`);
+  console.log(tui.info('Activate with:'));
+  console.log(`   ${tui.theme.colors.primary(`eval "$(ccx use ${profileName})"`)}`);
+  console.log('');
 }
